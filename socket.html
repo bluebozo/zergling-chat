@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Node.js WebSocket Client</title>
+</head>
+<body>
+    <h1>Zergling Chat</h1>
+    <div id="chat"></div>
+    <input type="text" id="nameBox" placeholder="unknown dummy">
+    <select name=color id="color">
+      <option value="" selected>--Pick your name color--</option>
+      <option value="Black">black</option>
+      <option value="White">white</option>
+      <option value="Red">red</option>
+      <option value="Lime">lime</option>
+      <option value="Blue">blue</option>
+      <option value="Gray">gray</option>
+      <option value="Cyan">cyan</option>
+      <option value="Maroon">maroon</option>
+      <option value="Magenta">magenta</option>
+      <option value="Olive">olive</option>
+      <option value="Teal">teal</option>
+      <option value="Navy">navy</option>
+      <option value="Purple">purple</option>
+      <option value="Yellow">yellow</option>
+    </select>
+    <input type="text" id="messageBox" placeholder="Type your message">
+    <button id="send">Send</button>
+
+    <script>
+    //function getIpAddress() {
+    //  return Object.values(require('os').networkInterfaces()).reduce((r, list) => r.concat(list.reduce((rr, i) => rr.concat(i.family==='IPv4' && !i.internal && i.address || []), [])), []);
+    //}
+        function getClientId() {
+          const clientId = localStorage.getItem('clientId');
+          if (!clientId) {
+            // crypto.randomUUID() is available in modern browsers (HTTPS context required)
+            sendMessage(JSON.stringify({ "type": "clientId", "clientId": null}));
+            localStorage.setItem('clientId', clientId);
+          }
+          alert(`reusing clientID: ${clientId}`);
+          return clientId;
+        }
+        // Connect to the WebSocket server running on port 8081
+        const socket = new WebSocket("wss://node-chat-a1cb.onrender.com/ws");
+        console.log(socket);
+       //socket.onopen = function () {
+       //connection.send("a"); // Send the message 'Ping' to the server
+       //console.log("send data...");
+        const chat = document.getElementById('chat');
+        const messageBox = document.getElementById('messageBox');
+        const nameBox = document.getElementById('nameBox');
+        const colorBox = document.getElementById('color');
+        const sendBtn = document.getElementById('send');
+
+        // Connection opened event
+        socket.addEventListener('open', event => {
+            console.log('WebSocket connection established!');
+            alert('connected to websocket!');
+            const name = localStorage.getItem('name');
+            if (name) {
+            nameBox.value = name;
+            }
+            const color= localStorage.getItem('color');
+            if (color) {
+            colorBox.value = color;
+            }
+            clientID = getClientId();
+            sendMessage(JSON.stringify({type: 'clientId', 'clientId': clientID}));
+            chat.innerHTML += `<p><em>H L40 User: ${clientID} Connected to server</em></p>`;
+        });
+
+        // Listen for messages from the server
+        socket.addEventListener('message', event => {
+            const data_json = JSON.parse(event.data)
+            if (data_json.type == "message") {
+              console.log('H L78 Message from server: ', event.data);
+              chat.innerHTML = data_json.message;
+            }
+            if (data_json.type == "clientId") {
+              console.log(`got a new clientId: ${data_json.clientId}`);
+              localStorage.setItem("clientId", data_json.clientId);
+            }
+        });
+        function getMessage() {
+          return `<span style="color: ${colorBox.value};">${nameBox.value}</span>: ${messageBox.value}`;
+        }
+        function sendMessage(message) {
+          if (socket.readyState === WebSocket.OPEN) {
+          socket.send(message);
+          //messages.innerHTML += `<p><strong>H L51 Client:</strong> ${message}</p>`;
+          messageBox.value = '';
+          } else {
+        console.error("WebSocket is not open. Current state: " + socket.readyState);
+        // Optional: Queue the message to send later when onopen fires
+    }
+        }
+
+        // Connection closed event
+        socket.addEventListener('close', event => {
+            console.log('WebSocket connection closed:', event.code, event.reason);
+            chat.innerHTML += "<p><em>Disconnected from server</em></p>";
+        });
+
+        // Error handling
+        socket.addEventListener('error', error => {
+            console.error('WebSocket error:', error);
+        });
+
+        // Send message to server when button is clicked
+        sendBtn.addEventListener('click', () => {
+            const message = messageBox.value;
+            const json_message = JSON.stringify({type: 'message', 'message': getMessage()});
+            if (message) {
+                sendMessage(json_message);
+            }
+            });
+messageBox.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+    // Prevent the default action (like submitting a form) if necessary
+    event.preventDefault();
+
+    // Trigger your action here
+    const message = messageBox.value;
+    const json_message = JSON.stringify({type: 'message', 'message': getMessage()});
+    sendMessage(json_message);
+    alert("Enter key pressed!");
+    // Or trigger a button click: document.getElementById("myBtn").click();
+  }
+});
+nameBox.addEventListener("change", function(event) {
+    alert(`set name: ${nameBox.value}`);
+    localStorage.setItem('name', nameBox.value);
+});
+colorBox.addEventListener("change", function(event) {
+    alert(`chose color: ${color.value}`);
+    localStorage.setItem('color', color.value);
+});
+    </script>
+</body>
+</html>
+
+
